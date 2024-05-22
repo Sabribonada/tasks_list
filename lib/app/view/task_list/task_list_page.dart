@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:lista_tareas/app/model/task.dart';
+import 'package:lista_tareas/app/repository/task_repository.dart';
+import 'package:lista_tareas/app/view/components/h1.dart';
 import 'package:lista_tareas/app/view/components/shape.dart';
 
-import '../components/h1.dart';
 
 class TaskListPage extends StatefulWidget {
   const TaskListPage({Key? key}) : super(key: key);
@@ -12,7 +13,7 @@ class TaskListPage extends StatefulWidget {
 }
 
 class _TaskListPageState extends State<TaskListPage> {
-  final taskList = <Task>[];
+  final TaskRepository taskRepo = TaskRepository();
 
   @override
   Widget build(BuildContext context) {
@@ -22,13 +23,24 @@ class _TaskListPageState extends State<TaskListPage> {
         children: [
           _Header(),
           Expanded(
-            child: _TaskList(
-              taskList,
-              onTaskDoneChange: (task) {
-                task.done = !task.done;
-                setState(() {});
-              },
-            ),
+            child: FutureBuilder<List<Task>>(
+                future: taskRepo.getTasks(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return const Center(child: Text('No hay tareas'));
+                  }
+                  return _TaskList(
+                    snapshot.data!,
+                    onTaskDoneChange: (task) {
+                      task.done = !task.done;
+                      taskRepo.saveTasks(snapshot.data!);
+                      setState(() {});
+                    },
+                  );
+                }),
           ),
         ],
       ),
@@ -45,9 +57,8 @@ class _TaskListPageState extends State<TaskListPage> {
       context: context,
       builder: (_) => _NewTaskModal(
         onTaskCreated: (Task task) {
-          setState(() {
-            taskList.add(task);
-          });
+          taskRepo.addTask(task);
+          setState(() {});
         },
       ),
     );
