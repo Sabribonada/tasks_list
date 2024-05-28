@@ -1,6 +1,8 @@
 # lista_tareas
-
 Lista de tareas Domestika
+
+![image](https://github.com/Sabribonada/tasks_list/assets/105463439/fbb6d1c2-1319-4c1f-ad1d-08a74b0a9d4a) ![image](https://github.com/Sabribonada/tasks_list/assets/105463439/2bf678ac-7799-46c4-8c93-65541ab8ddfd) ![image](https://github.com/Sabribonada/tasks_list/assets/105463439/425b1e43-1d4f-4d6d-8393-5917d75366e0)
+
 
 ## Getting Started
 
