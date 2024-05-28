@@ -1,52 +1,30 @@
+import 'package:ToDoo/app/model/task.dart';
+import 'package:ToDoo/app/view/components/h1.dart';
+import 'package:ToDoo/app/view/components/shape.dart';
+import 'package:ToDoo/app/view/task_list/task_provider.dart';
 import 'package:flutter/material.dart';
-import 'package:lista_tareas/app/model/task.dart';
-import 'package:lista_tareas/app/repository/task_repository.dart';
-import 'package:lista_tareas/app/view/components/h1.dart';
-import 'package:lista_tareas/app/view/components/shape.dart';
+import 'package:provider/provider.dart';
 
-
-class TaskListPage extends StatefulWidget {
+class TaskListPage extends StatelessWidget {
   const TaskListPage({Key? key}) : super(key: key);
 
   @override
-  State<TaskListPage> createState() => _TaskListPageState();
-}
-
-class _TaskListPageState extends State<TaskListPage> {
-  final TaskRepository taskRepo = TaskRepository();
-
-  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _Header(),
-          Expanded(
-            child: FutureBuilder<List<Task>>(
-                future: taskRepo.getTasks(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return const Center(child: Text('No hay tareas'));
-                  }
-                  return _TaskList(
-                    snapshot.data!,
-                    onTaskDoneChange: (task) {
-                      task.done = !task.done;
-                      taskRepo.saveTasks(snapshot.data!);
-                      setState(() {});
-                    },
-                  );
-                }),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showNewTaskModal(context),
-        child: const Icon(Icons.add, size: 50),
+    return ChangeNotifierProvider(
+      create: (_) => TaskProvider()..getTasks(),
+      child: Scaffold(
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _Header(),
+            const Expanded(child: _TaskList()),
+          ],
+        ),
+        floatingActionButton: Builder(
+            builder: (context) => FloatingActionButton(
+                  onPressed: () => _showNewTaskModal(context),
+                  child: const Icon(Icons.add, size: 50),
+                )),
       ),
     );
   }
@@ -55,42 +33,50 @@ class _TaskListPageState extends State<TaskListPage> {
     showModalBottomSheet(
       isScrollControlled: true,
       context: context,
-      builder: (_) => _NewTaskModal(
-        onTaskCreated: (Task task) {
-          taskRepo.addTask(task);
-          setState(() {});
-        },
+      builder: (_) => ChangeNotifierProvider.value(
+        value: context.read<TaskProvider>(),
+        child: _NewTaskModal(),
       ),
     );
   }
 }
 
 class _NewTaskModal extends StatelessWidget {
-  _NewTaskModal({super.key, required this.onTaskCreated});
+  _NewTaskModal({super.key});
 
   final _controller = TextEditingController();
-  final void Function(Task task) onTaskCreated;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 23, vertical: 33),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const H1("Nueva Tarea"),
-          const SizedBox(
-            height: 26,
-          ),
-          SingleChildScrollView(
-            child: Container(
+    return SingleChildScrollView(
+      child: Container(
+        padding: EdgeInsets.only(
+            left: 23,
+            right: 23,
+            top: 33,
+            bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const H1("Nueva Tarea"),
+            const SizedBox(
+              height: 26,
+            ),
+            Container(
               decoration: BoxDecoration(
                 border: Border.all(
                     color: Theme.of(context).colorScheme.primaryContainer),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: TextField(
+                onSubmitted: (value) {
+                  if (_controller.text.isNotEmpty) {
+                    final task = Task(_controller.text);
+                    context.read<TaskProvider>().addNewTask(task);
+                    Navigator.of(context).pop();
+                  }
+                },
                 controller: _controller,
                 decoration: const InputDecoration(
                   hintText: 'Descripción de la tarea',
@@ -99,30 +85,30 @@ class _NewTaskModal extends StatelessWidget {
                 ),
               ),
             ),
-          ),
-          const SizedBox(
-            height: 26,
-          ),
-          ElevatedButton(
-              onPressed: () {
-                if (_controller.text.isNotEmpty) {
-                  final task = Task(_controller.text);
-                  onTaskCreated(task);
-                  Navigator.of(context).pop();
-                }
-              },
-              child: const Text("Guardar")),
-        ],
+            const SizedBox(
+              height: 26,
+            ),
+            ElevatedButton(
+                onPressed: () {
+                  if (_controller.text.isNotEmpty) {
+                    final task = Task(_controller.text);
+                    context.read<TaskProvider>().addNewTask(task);
+                    Navigator.of(context).pop();
+                  }
+                },
+                child: const Text("Guardar")),
+            const SizedBox(
+              height: 33,
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
 class _TaskList extends StatelessWidget {
-  const _TaskList(this.taskList, {super.key, required this.onTaskDoneChange});
-
-  final List<Task> taskList;
-  final void Function(Task task) onTaskDoneChange;
+  const _TaskList({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -130,19 +116,36 @@ class _TaskList extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Padding(
-          padding: EdgeInsets.only(left: 30, right: 30, top: 35),
+          padding: EdgeInsets.only(
+            left: 30,
+            right: 30,
+            top: 35,
+          ),
           child: H1('Tareas'),
         ),
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 30),
-            child: ListView.separated(
-              itemCount: taskList.length,
-              itemBuilder: (_, index) => _TaskItem(taskList[index],
-                  onTap: () => onTaskDoneChange(taskList[index])),
-              separatorBuilder: (_, __) => const SizedBox(height: 16),
-            ),
-          ),
+              padding: const EdgeInsets.symmetric(horizontal: 30),
+              child: Consumer<TaskProvider>(
+                builder: (_, provider, __) {
+                  if (provider.taskList.isEmpty) {
+                    return const Center(child: Text('No hay tareas'));
+                  }
+                  return Padding(
+                    padding: const EdgeInsets.only(
+                      bottom: 15,
+                    ),
+                    child: ListView.separated(
+                      itemCount: provider.taskList.length,
+                      itemBuilder: (_, index) => _TaskItem(
+                          provider.taskList[index],
+                          onTap: () => provider
+                              .onTaskDoneChange(provider.taskList[index])),
+                      separatorBuilder: (_, __) => const SizedBox(height: 16),
+                    ),
+                  );
+                },
+              )),
         ),
       ],
     );

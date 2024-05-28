@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:lista_tareas/app/model/task.dart';
+import 'package:ToDoo/app/model/task.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class TaskRepository {

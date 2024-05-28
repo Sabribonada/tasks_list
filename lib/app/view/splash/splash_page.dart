@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:lista_tareas/app/view/components/h1.dart';
-import 'package:lista_tareas/app/view/components/shape.dart';
-import 'package:lista_tareas/app/view/task_list/task_list_page.dart';
+import 'package:ToDoo/app/view/components/h1.dart';
+import 'package:ToDoo/app/view/components/shape.dart';
+import 'package:ToDoo/app/view/task_list/task_list_page.dart';
 
 class SplashPage extends StatelessWidget {
   @override
